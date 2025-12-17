@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -24,6 +25,8 @@ import { db } from '../../firebaseConfig';
 import { COLORS, FONT_SIZES } from '../../types';
 import { RootStackParamList } from '../../navigation/StackNavigator';
 
+// CONSTANTES Y TIPOS
+// Se definen las categorías disponibles y las interfaces para los productos y los parámetros de navegación.
 const CATEGORIES = [
   "Planta",
   "Maceta",
@@ -34,7 +37,6 @@ const CATEGORIES = [
   "Otros"
 ];
 
-// Actualizamos la interfaz para incluir stock opcional
 interface Product {
   id: string;
   name: string;
@@ -53,13 +55,19 @@ type AddProductParams = {
 
 type AddProductRouteProp = RouteProp<AddProductParams, 'AddProduct'>;
 
+// COMPONENTE PRINCIPAL
+// Pantalla encargada de crear nuevos productos o editar los existentes.
 const AddProductScreen = () => {
+  
+  // HOOKS DE NAVEGACIÓN
   const navigation = useNavigation();
   const route = useRoute<AddProductRouteProp>();
   
   const productToEdit = route.params?.productToEdit;
   const isEditing = !!productToEdit;
 
+  // ESTADO DEL FORMULARIO
+  // Se inicializan los estados locales para cada campo del producto y el control de la interfaz.
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState(''); 
@@ -69,6 +77,7 @@ const AddProductScreen = () => {
   const [loading, setLoading] = useState(false);
   const [modalCategoriesVisible, setModalCategoriesVisible] = useState(false);
 
+  // ESTADO DE ALERTAS
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
@@ -76,6 +85,8 @@ const AddProductScreen = () => {
     buttons?: { text: string; onPress: () => void; style?: 'cancel' | 'destructive' }[];
   }>({ visible: false, title: '', message: '' });
 
+  // CARGA DE DATOS INICIAL
+  // Si se recibe un producto para editar, se rellenan los campos con su información.
   useEffect(() => {
     if (isEditing && productToEdit) {
         setName(productToEdit.name);
@@ -89,6 +100,7 @@ const AddProductScreen = () => {
     }
   }, [isEditing, productToEdit]);
 
+  // GESTIÓN DE ALERTAS PERSONALIZADAS
   const showCustomAlert = (
     title: string,
     message: string,
@@ -101,7 +113,8 @@ const AddProductScreen = () => {
     setCustomAlert({ ...customAlert, visible: false, buttons: [] });
   };
 
-  // --- LÓGICA DE PROTECCIÓN AL SALIR ---
+  // PROTECCIÓN DE NAVEGACIÓN
+  // Se verifica si hay cambios sin guardar antes de permitir que el usuario salga de la pantalla.
   const hasUnsavedChanges = () => {
     if (isEditing && productToEdit) {
         return (
@@ -155,7 +168,7 @@ const AddProductScreen = () => {
     return () => backHandler.remove();
   }, [name, price, stock, category, description, imageUri]);
 
-  // ... (Funciones de Alerta, Cámara y Galería quedan igual) ...
+  // COMPONENTE VISUAL DE ALERTA
   const CustomAlert: React.FC = () => {
     const alertButtons = customAlert.buttons && customAlert.buttons.length > 0
       ? customAlert.buttons
@@ -200,6 +213,8 @@ const AddProductScreen = () => {
     );
   };
 
+  // GESTIÓN DE IMÁGENES
+  // Funciones para seleccionar imágenes desde la cámara o la galería del dispositivo.
   const handleCamera = async () => {
     closeCustomAlert(); 
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
@@ -242,6 +257,8 @@ const AddProductScreen = () => {
     );
   };
 
+  // GUARDADO DE DATOS
+  // Se validan los campos obligatorios y se envía la información a Firestore (creación o actualización).
   const handleSave = async () => {
     if (!name || !price) {
       showCustomAlert("Faltan datos", "Por favor completa nombre y precio.");
@@ -259,15 +276,11 @@ const AddProductScreen = () => {
         description: description || '',
         image: imageUri || '',
     };
-
-    // --- CORRECCIÓN OFFLINE: NO USAMOS AWAIT EN LA ESCRITURA ---
-    // Esto es "Optimistic Update": Asumimos que se guardará en background
     
     try {
       if (isEditing && productToEdit) {
         const productRef = doc(db, "products", productToEdit.id);
         
-        // Disparamos la actualización sin esperar respuesta del servidor (evita hang offline)
         updateDoc(productRef, productData)
             .catch(e => console.log("Sincronización pendiente:", e));
 
@@ -287,7 +300,6 @@ const AddProductScreen = () => {
       } else {
         const newProduct = { ...productData, createdAt: new Date() };
         
-        // Disparamos la creación sin esperar
         addDoc(collection(db, "products"), newProduct)
             .catch(e => console.log("Sincronización pendiente:", e));
 
@@ -315,10 +327,12 @@ const AddProductScreen = () => {
     }
   };
 
+  // RENDERIZADO VISUAL
   return (
     <SafeAreaView style={styles.container}>
         <CustomAlert />
 
+        {/* Modal de selección de categorías */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -367,6 +381,7 @@ const AddProductScreen = () => {
           </Pressable>
         </Modal>
 
+        {/* Formulario principal */}
         <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -412,7 +427,7 @@ const AddProductScreen = () => {
                 </View>
 
                 <View style={{flexDirection: 'row', gap: 10}}>
-                    {/* PRECIO */}
+                    {/* Campo de Precio */}
                     <View style={{flex: 1}}>
                         <Text style={styles.label}>Precio</Text>
                         <View style={styles.inputContainer}>
@@ -427,7 +442,7 @@ const AddProductScreen = () => {
                         </View>
                     </View>
 
-                    {/* STOCK (NUEVO CAMPO) */}
+                    {/* Campo de Stock */}
                     <View style={{flex: 1}}>
                         <Text style={styles.label}>Stock</Text>
                         <View style={styles.inputContainer}>
@@ -495,7 +510,7 @@ const AddProductScreen = () => {
   );
 };
 
-// ... Estilos ...
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -728,4 +743,5 @@ const styles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default AddProductScreen;

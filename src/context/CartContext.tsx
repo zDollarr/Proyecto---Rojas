@@ -1,9 +1,12 @@
+// IMPORTACIONES
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebaseConfig"; 
 import { Product } from "../types"; 
 
+// DEFINICIÓN DE TIPOS
+// Aquí se define qué estructura tendrá cada producto en el carrito y qué funciones podrán usar los componentes.
 export interface CartItem {
   product: Product;
   quantity: number;
@@ -20,33 +23,41 @@ interface CartContextProps {
   cartCount: number;
 }
 
+// INICIALIZACIÓN DEL CONTEXTO
+// El "canal" por donde viajarán los datos del carrito a toda la aplicación. Empieza vacío "undefined".
 const CartContext = createContext<CartContextProps | undefined>(undefined);
 
+// COMPONENTE PRINCIPAL DEL CARRITO
+// Este es el "cerebro" del carrito. Envuelve a toda la app para que cualquier pantalla pueda leer o modificar el carrito.
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  
+  // VARIABLES DE ESTADO
+  // Aquí se guarda la lista de productos "cart", quién es el usuario actual "userId" y si ya terminamos de cargar los datos "isLoaded".
   const [cart, setCart] = useState<CartItem[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false); // Evita sobrescribir antes de cargar
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // 1. Escuchar quién está logueado
+  // DETECCIÓN DE USUARIO
+  // Se observa a Firebase en tiempo real. Si el usuario entra, guardamos su ID. Si sale, borramos su ID y limpiamos el carrito visual.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
       } else {
         setUserId(null);
-        setCart([]); // Si se desloguea, limpiamos el carrito visualmente
+        setCart([]); 
       }
     });
     return unsubscribe;
   }, []);
 
-  // 2. Cargar el carrito específico de ese usuario
+  // RECUPERACIÓN DE DATOS GUARDADOS
+  // Cuando se detecta un usuario, se busca en el celular si dejó un carrito guardado anteriormente y se restaura.
   useEffect(() => {
     const loadCart = async () => {
-      setIsLoaded(false); // Bloqueamos guardado mientras cargamos
+      setIsLoaded(false); 
       if (userId) {
         try {
-          // Usamos una clave ÚNICA por usuario
           const storedCart = await AsyncStorage.getItem(`cart_${userId}`);
           if (storedCart) {
             setCart(JSON.parse(storedCart));
@@ -59,16 +70,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setCart([]);
       }
-      setIsLoaded(true); // Ya cargó, liberamos el guardado
+      setIsLoaded(true);
     };
 
     loadCart();
   }, [userId]);
 
-  // 3. Guardar el carrito en la clave de ese usuario
+  // GUARDADO AUTOMÁTICO
+  // Cada vez que se agrega o quita algo del carrito, esto lo guarda automáticamente en la memoria del celular.
   useEffect(() => {
     const saveCart = async () => {
-      // Solo guardamos si ya terminamos de cargar y hay un usuario
       if (!isLoaded || !userId) return; 
       
       try {
@@ -81,6 +92,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveCart();
   }, [cart, userId, isLoaded]);
 
+  // FUNCIONES DE MANEJO DEL CARRITO
+  // Aquí se aplica una suma de x cantidad si ya existe el producto al igual que eliminarlos o vaciar todo.
   const addToCart = (product: Product) => {
     setCart((currentCart) => {
       const existingItem = currentCart.find((item) => item.product.id === product.id);
@@ -117,9 +130,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCart(newCart);
   };
 
+  // CÁLCULO DE TOTALES
+  // Se calcula cuánto dinero es el total y cuántos productos hay en total.
   const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // RENDERIZADO
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, refreshCart, total, cartCount }}>
       {children}
@@ -127,6 +143,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// HOOK PERSONALIZADO
+// Esta función permite usar el carrito en cualquier pantalla con solo escribir `useCart()`.
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) throw new Error("useCart debe usarse dentro de CartProvider");

@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
@@ -31,6 +32,8 @@ import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 
 import { useFavorites } from "../../context/FavoritesContext";
 
+// CONFIGURACIÓN DE SALIDA DE APP
+// Se intenta cargar la librería de salida para Android, manejando errores en Expo Go.
 let RNExitApp: any;
 if (Platform.OS === "android" || Platform.OS === "ios") {
   try {
@@ -40,6 +43,8 @@ if (Platform.OS === "android" || Platform.OS === "ios") {
   }
 }
 
+// DEFINICIÓN DE TIPOS
+// Estructura de datos para los productos y configuración de navegación.
 interface Product {
   id: string;
   name: string;
@@ -66,10 +71,33 @@ interface HomeScreenProps {
   navigation: HomeScreenNavigationProp;
 }
 
+// COMPONENTE PRINCIPAL (HOME)
+// Pantalla principal que muestra el catálogo de productos, filtros y gestión de sesión.
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  
+  // ESTADOS DE INTERFAZ
   const [menuVisible, setMenuVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
+  // ESTADOS DE DATOS
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // ESTADOS DE USUARIO Y CONEXIÓN
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<"client" | "owner" | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // HOOKS Y REFERENCIAS
+  const { toggleFavorite, isFavorite, canUseFavorites } = useFavorites();
+  const inputRef = useRef<TextInput | null>(null);
+
+  // ESTADO DE ALERTAS
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
@@ -77,24 +105,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     buttons?: { text: string; onPress: () => void; style?: "cancel" | "destructive" }[];
   }>({ visible: false, title: "", message: "" });
 
-  const [searchText, setSearchText] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
-  const { toggleFavorite, isFavorite, canUseFavorites } = useFavorites();
-
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const inputRef = useRef<TextInput | null>(null);
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<"client" | "owner" | null>(null);
-
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  
-  const [isOnline, setIsOnline] = useState(true);
-
+  // GESTIÓN DEL TECLADO
+  // Se detecta si el teclado está abierto para ajustar la interfaz.
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
     const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
@@ -104,6 +116,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, []);
 
+  // GESTIÓN DE SESIÓN
+  // Se escucha el estado de autenticación y se recupera el rol del usuario desde Firestore.
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
@@ -136,6 +150,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return unsubscribe;
   }, []);
 
+  // CARGA DE PRODUCTOS
+  // Se obtienen los productos desde Firestore y se actualiza el estado local.
   const fetchProducts = async () => {
     try {
       const productsRef = collection(db, "products");
@@ -181,7 +197,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     });
   };
 
-  // ... (Resto de funciones: Alerts, Filters, Navigation se mantienen igual) ...
+  // GESTIÓN DE ALERTAS PERSONALIZADAS
   const showCustomAlert = (
     title: string,
     message: string,
@@ -194,6 +210,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setCustomAlert((prev) => ({ ...prev, visible: false, buttons: [] }));
   };
 
+  // LÓGICA DE FILTRADO
+  // Se filtran los productos basándose en el texto de búsqueda y las categorías seleccionadas.
   const applyFilters = (text: string, categories: string[], list: Product[] = products) => {
     let result = list;
     if (categories.length > 0) {
@@ -227,6 +245,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setFilterModalVisible(false);
   };
 
+  // NAVEGACIÓN Y ACCIONES DE MENÚ
   const handleGoBackPress = (): void => {
     showCustomAlert(" E s p e r a", "¿Seguro que quieres abandonar la App?", [
       { text: "No", onPress: () => closeCustomAlert(), style: "cancel" },
@@ -317,6 +336,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate("AddProduct");
   };
 
+  // RENDERIZADO DE ELEMENTOS
+  // Componente visual para cada tarjeta de producto.
   const renderProductItem = ({ item }: { item: Product }) => {
     const imageSource = item.image ? { uri: item.image } : require("../../../assets/planta.png");
 
@@ -347,6 +368,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   };
 
+  // COMPONENTE DE ALERTA
   const CustomAlert: React.FC = () => {
     const alertButtons =
       customAlert.buttons && customAlert.buttons.length > 0
@@ -393,6 +415,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   };
 
+  // RENDERIZADO PRINCIPAL
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -413,7 +436,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
             </TouchableOpacity>
 
-            {/* INDICADOR DE ESTADO (Alineado con TOP: 25) */}
+            {/* Indicador de estado de conexión */}
             <View style={{ alignItems: 'center', top: 25 }}>
                 <View style={[
                     styles.statusIndicator, 
@@ -436,7 +459,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           <CustomAlert />
 
-          {/* Modal filtros */}
+          {/* Modal de Filtros */}
           <Modal
             animationType="fade"
             transparent
@@ -490,7 +513,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </Pressable>
           </Modal>
 
-          {/* Modal CUENTA */}
+          {/* Modal de Menú de Usuario */}
           <Modal
             animationType="fade"
             transparent
@@ -660,6 +683,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   figmaHeaderContainer: {
@@ -690,7 +714,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 1 },
   },
-  // ESTILOS PARA INDICADOR
   statusIndicator: {
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -713,7 +736,6 @@ const styles = StyleSheet.create({
     color: '#555', 
     fontFamily: 'KalamBold'
   },
-  // ... resto de estilos iguales
   contentContainer: {
     flex: 1,
     paddingTop: 20,
@@ -1028,4 +1050,5 @@ const styles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default HomeScreen;

@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState } from "react";
 import {
   View,
@@ -14,19 +15,37 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
 import { COLORS, FONT_SIZES } from "../../../types/index";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import app from "../../firebaseConfig";
 import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MaterialIcons } from "@expo/vector-icons";
-import {sendPasswordResetEmail } from "firebase/auth";
 
+// DEFINICIÓN DE TIPOS E INTERFACES
+// Se definen las props para la navegación, el formulario y las alertas personalizadas.
 interface CustomAlertProps {
   title: string;
   message: string;
   visible: boolean;
   onClose: () => void;
 }
+
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+interface LoginScreenProps {
+  navigation: LoginScreenNavigationProp;
+}
+
+// RECURSOS ESTÁTICOS
+const loginImage = require("../../../assets/login_image.png");
+
+// COMPONENTES AUXILIARES
+// Componente modal para mostrar alertas personalizadas en lugar de las nativas.
 const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onClose }) => (
   <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
     <Pressable style={customStyles.alertOverlay} onPress={onClose}>
@@ -41,20 +60,11 @@ const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onCl
   </Modal>
 );
 
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
-
-interface LoginFormData {
-  email: string;
-  password: string;
-}
-
-interface LoginScreenProps {
-  navigation: LoginScreenNavigationProp;
-}
-
-const loginImage = require("../../../assets/login_image.png");
-
+// COMPONENTE PRINCIPAL DE INICIO DE SESIÓN
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+  
+  // ESTADO DEL COMPONENTE
+  // Gestión de datos del formulario, carga, visibilidad de contraseña y alertas.
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
@@ -67,6 +77,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     message: "",
   });
 
+  // GESTIÓN DE ALERTAS
   const showCustomAlert = (title: string, message: string): void => {
     setCustomAlert({ visible: true, title, message });
   };
@@ -75,6 +86,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     setCustomAlert({ ...customAlert, visible: false });
   };
 
+  // MANEJO DE FORMULARIO
   const updateFormData = (field: keyof LoginFormData, value: string): void => {
     setFormData((prevData: LoginFormData) => ({
       ...prevData,
@@ -82,6 +94,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }));
   };
 
+  // VALIDACIÓN DE DATOS
+  // Se verifica que los campos no estén vacíos y cumplan requisitos mínimos antes de enviar.
   const validateForm = (): boolean => {
     if (!formData.email.trim()) {
       showCustomAlert("E R R O R", "Por favor, ingresa tu usuario o correo electrónico.");
@@ -98,12 +112,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     return true;
   };
 
+  // LÓGICA DE AUTENTICACIÓN
+  // Maneja el inicio de sesión. Si el input no es un correo, busca el nombre de usuario en Firestore primero.
   const handleLogin = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
 
     try {
       let emailToLogin = formData.email.trim();
+      
       if (!emailToLogin.includes("@")) {
         const db = getFirestore(app);
         const usersCol = collection(db, "users");
@@ -145,12 +162,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
+  // RECUPERACIÓN DE CONTRASEÑA
+  // Envía un correo de restablecimiento si el usuario olvidó su contraseña.
   const handleForgotPassword = async () => {
     if (!formData.email.trim()) {
       showCustomAlert("Recuperar contraseña", "Por favor, ingresa tu correo electrónico en el campo de usuario.");
       return;
     }
-    // Puedes validar si es correo real
+    
     if (!formData.email.includes("@") || !formData.email.includes(".")) {
       showCustomAlert("Recuperar contraseña", "Ingresa un correo electrónico válido.");
       return;
@@ -171,13 +190,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-
+  // RENDERIZADO VISUAL
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* BOTÓN X */}
       <TouchableOpacity
         style={styles.closeButton}
         onPress={() => navigation.replace("Home")}
@@ -197,8 +215,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           source={loginImage}
           style={styles.loginImage}
         />
-        <Text style={styles.title}>J o s s  L i f e</Text>
+        <Text style={styles.title}>J o s s  L i f e</Text>
         <Text style={styles.subtitle}>Iniciar Sesión</Text>
+        
         <View style={styles.formContainer}>
           <TextInput
             style={styles.input}
@@ -245,6 +264,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.linksContainer}>
           <TouchableOpacity onPress={() => navigation.navigate('ResetPassword')}>
             <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
@@ -258,6 +278,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -360,6 +381,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// ESTILOS DE COMPONENTES PERSONALIZADOS
 const customStyles = StyleSheet.create({
   alertOverlay: {
     flex: 1,
@@ -406,4 +428,5 @@ const customStyles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default LoginScreen;

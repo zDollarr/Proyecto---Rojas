@@ -16,9 +16,8 @@ import {
   Courgette_400Regular
 } from "@expo-google-fonts/courgette";
 
-// Contextos (Favoritos y Carrito)
 import { FavoritesProvider } from "./src/context/FavoritesContext";
-import { CartProvider } from "./src/context/CartContext"; // <--- NUEVO
+import { CartProvider } from "./src/context/CartContext";
 
 const App: React.FC = () => {
   const [fontsLoaded] = useFonts({
@@ -38,7 +37,7 @@ const App: React.FC = () => {
 
   return (
     <FavoritesProvider>
-      <CartProvider> {/* <--- Aquí envolvemos el Carrito dentro de Favoritos */}
+      <CartProvider>
         <NavigationContainer>
           <StackNavigator />
         </NavigationContainer>

@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Image, TouchableOpacity, Text } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -5,11 +6,20 @@ import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../../navigation/StackNavigator';
 import { MaterialIcons } from "@expo/vector-icons";
 
+// DEFINICIÓN DE TIPOS
+// Se especifican las props que recibe esta pantalla desde la navegación.
 type Props = StackScreenProps<RootStackParamList, "PlantCamera">;
 
+// COMPONENTE PRINCIPAL
+// Pantalla que muestra la cámara activa con una superposición de la imagen del producto para visualizarla en el entorno real (Realidad Aumentada simple).
 const PlantOverlayCamera: React.FC<Props> = ({ navigation, route }) => {
+  
+  // OBTENCIÓN DE DATOS
+  // Se recupera el producto enviado a través de los parámetros de la ruta.
   const { product } = route.params || {}; 
   
+  // GESTIÓN DE PERMISOS
+  // Hook de Expo para verificar y solicitar acceso a la cámara del dispositivo.
   const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
@@ -18,10 +28,14 @@ const PlantOverlayCamera: React.FC<Props> = ({ navigation, route }) => {
     }
   }, []);
 
+  // CONFIGURACIÓN DE IMAGEN
+  // Se determina qué imagen mostrar en la superposición (la del producto o una por defecto).
   const imageSource = product?.image 
     ? { uri: product.image } 
     : require('../../../assets/planta.png');
 
+  // MANEJO DE ESTADOS DE PERMISO
+  // Se muestra una vista vacía mientras carga o una pantalla de solicitud si el permiso fue denegado.
   if (!permission) return <View />;
   
   if (!permission.granted)
@@ -34,9 +48,11 @@ const PlantOverlayCamera: React.FC<Props> = ({ navigation, route }) => {
       </View>
     );
 
+  // RENDERIZADO VISUAL
   return (
     <View style={{ flex: 1 }}>
       <CameraView style={{ flex: 1 }} facing="back" />
+      
       <Image
         source={imageSource}
         style={styles.overlay}
@@ -53,6 +69,7 @@ const PlantOverlayCamera: React.FC<Props> = ({ navigation, route }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
@@ -100,4 +117,5 @@ const styles = StyleSheet.create({
   }
 });
 
+// EXPORTACIÓN
 export default PlantOverlayCamera;

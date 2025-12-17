@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -20,13 +21,18 @@ import { db, auth } from "../../firebaseConfig";
 import { doc, deleteDoc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
-// IMPORTAMOS CONTEXTOS
+// IMPORTACIÓN DE CONTEXTOS
 import { useFavorites } from "../../context/FavoritesContext";
 import { useCart } from "../../context/CartContext";
 
+// DEFINICIÓN DE TIPOS
 type Props = StackScreenProps<RootStackParamList, "ProductDetail">;
 
+// COMPONENTE PRINCIPAL (DETALLE DE PRODUCTO)
+// Muestra la información completa de un producto, permitiendo agregarlo al carrito, marcarlo como favorito o editarlo si se es dueño.
 const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+  
+  // OBTENCIÓN DE DATOS
   const { product, userRole } = route.params as { product: any; userRole?: string };
   const [currentProduct, setCurrentProduct] = useState(product);
 
@@ -36,6 +42,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [isGalleryVisible, setIsGalleryVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // ESTADO DE ALERTAS
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
@@ -43,13 +50,14 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     buttons?: { text: string; onPress: () => void; style?: "cancel" | "destructive" }[];
   }>({ visible: false, title: "", message: "" });
 
+  // CONSTANTES DE ACCESO
   const isOwner = userRole === "owner";
 
-  // CONTEXTOS
+  // HOOKS DE CONTEXTO
   const { toggleFavorite, isFavorite } = useFavorites();
   const { addToCart } = useCart();
 
-  // LOGIN
+  // GESTIÓN DE SESIÓN
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -66,7 +74,8 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     return isFavorite(productId);
   }, [productId, isFavorite]);
 
-  // --- ESCUCHAR CAMBIOS EN TIEMPO REAL ---
+  // SINCRONIZACIÓN EN TIEMPO REAL
+  // Se escuchan los cambios del producto en Firestore para mantener la vista actualizada (stock, precios, etc).
   useEffect(() => {
     const productRef = doc(db, "products", product.id);
     const unsubscribe = onSnapshot(productRef, (docSnapshot) => {
@@ -77,7 +86,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     return () => unsubscribe();
   }, [product.id]);
 
-  // --- FUNCIONES DE ALERTA ---
+  // GESTIÓN DE ALERTAS
   const showCustomAlert = (
     title: string,
     message: string,
@@ -90,11 +99,12 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     setCustomAlert({ ...customAlert, visible: false, buttons: [] });
   };
 
-  // --- LÓGICA DE STOCK ---
+  // VALIDACIÓN DE STOCK
   const currentStock = (currentProduct as any).stock !== undefined ? (currentProduct as any).stock : 0;
   const isOutOfStock = currentStock <= 0;
 
-  // --- LÓGICA DE AGREGAR AL CARRITO ---
+  // LÓGICA DE COMPRA
+  // Verifica el stock disponible y añade el producto al carrito global.
   const handleConfirmAddToCart = () => {
     if (quantity > currentStock) {
         showCustomAlert("Stock Insuficiente", `Solo quedan ${currentStock} unidades disponibles.`);
@@ -115,6 +125,8 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     setQuantity(1);
   };
 
+  // ELIMINACIÓN DE PRODUCTO
+  // Solo accesible para el dueño. Borra el documento de Firestore de forma permanente.
   const handleDeleteProduct = () => {
     showCustomAlert(
       "Eliminar Producto",
@@ -143,6 +155,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   };
 
+  // COMPONENTE VISUAL DE ALERTA
   const CustomAlert: React.FC = () => {
     const alertButtons =
       customAlert.buttons && customAlert.buttons.length > 0
@@ -189,6 +202,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   };
 
+  // PREPARACIÓN DE RECURSOS VISUALES
   const imageSource = currentProduct.image
     ? { uri: currentProduct.image }
     : require("../../../assets/planta.png");
@@ -209,6 +223,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       "suculenta", "interior", "exterior", "decorativa"
     ].some((tag: string) => currentProduct.category.toLowerCase().includes(tag));
 
+  // RENDERIZADO PRINCIPAL
   return (
     <ScrollView
       style={styles.container}
@@ -225,6 +240,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </TouchableWithoutFeedback>
       )}
 
+      {/* Visor de imágenes a pantalla completa */}
       <ImageViewing
         images={images}
         imageIndex={0}
@@ -252,7 +268,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         <MaterialIcons name="arrow-back" size={22} color="#222" />
       </TouchableOpacity>
 
-      {/* Botón Favoritos - Solo si logueado */}
+      {/* Botones de navegación superior (Solo logueados) */}
       {isLoggedIn && (
         <TouchableOpacity
           style={styles.favoritesTopButton}
@@ -262,7 +278,6 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </TouchableOpacity>
       )}
 
-      {/* Botón Carrito - Solo si logueado */}
       {isLoggedIn && (
         <TouchableOpacity 
           style={styles.cartButton} 
@@ -272,6 +287,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </TouchableOpacity>
       )}
 
+      {/* Tarjeta principal del producto */}
       <View style={styles.card}>
         <TouchableOpacity onPress={() => setIsGalleryVisible(true)} activeOpacity={0.9}>
           <Image source={imageSource} style={styles.cardImage} resizeMode="cover" />
@@ -282,13 +298,13 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         {currentProduct.category && <Text style={styles.cardCategory}>{currentProduct.category}</Text>}
         
         <Text style={[styles.stockText, isOutOfStock ? {color: '#ff4444'} : {color: '#4CAF50'}]}>
-             {isOutOfStock ? "Agotado" : `Disponibles: ${currentStock}`}
+              {isOutOfStock ? "Agotado" : `Disponibles: ${currentStock}`}
         </Text>
 
         <View style={styles.row}>
           <Text style={styles.cardPrice}>{Number(currentProduct.price).toLocaleString()} $ mxn</Text>
 
-          {/* ÁREA DEL BOTÓN DE AGREGAR */}
+          {/* Botón de añadir (Flotante) */}
           <View style={{ position: "relative" }}>
             
             {isOutOfStock ? (
@@ -310,7 +326,6 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 </TouchableOpacity>
             )}
 
-            {/* --- TARJETA FLOTANTE --- */}
             {bubbleVisible && !isOutOfStock && (
               <TouchableWithoutFeedback>
                 <View style={styles.addCard}>
@@ -366,6 +381,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </View>
       </View>
 
+      {/* Botones de acción secundaria (AR y Edición) */}
       <View style={styles.actionButtonsContainer}>
         {shouldShowARButton && (
           <TouchableOpacity
@@ -395,12 +411,14 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         )}
       </View>
 
+      {/* Descripción del producto */}
       <View style={styles.infoCard}>
         <Text style={[styles.infoText, isDefaultDescription && { color: "#c5c5c5ff" }]}>
           {descriptionText}
         </Text>
       </View>
 
+      {/* Botón de eliminación (Solo dueño) */}
       {isOwner && (
         <TouchableOpacity
           style={[styles.deleteButton, deleting && { opacity: 0.7 }]}
@@ -423,6 +441,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: {
     top: 2,
@@ -778,4 +797,5 @@ const styles = StyleSheet.create({
   }
 });
 
+// EXPORTACIÓN
 export default ProductDetailScreen;

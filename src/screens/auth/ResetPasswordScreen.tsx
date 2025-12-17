@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState } from "react";
 import {
   View,
@@ -18,12 +19,27 @@ import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import app from "../../firebaseConfig";
 import { MaterialIcons } from "@expo/vector-icons";
 
+// DEFINICIÓN DE TIPOS E INTERFACES
+// Se definen las props para la navegación y el formulario de recuperación.
 interface CustomAlertProps {
   title: string;
   message: string;
   visible: boolean;
   onClose: () => void;
 }
+
+type ResetPasswordScreenNavigationProp = StackNavigationProp<RootStackParamList, keyof RootStackParamList>;
+
+interface ResetPasswordScreenProps { 
+    navigation: ResetPasswordScreenNavigationProp; 
+}
+
+interface FormData {
+  email: string;
+}
+
+// COMPONENTES AUXILIARES
+// Componente modal para mostrar alertas personalizadas.
 const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onClose }) => (
   <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
     <Pressable style={customStyles.alertOverlay} onPress={onClose}>
@@ -38,13 +54,11 @@ const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onCl
   </Modal>
 );
 
-type ResetPasswordScreenNavigationProp = StackNavigationProp<RootStackParamList, keyof RootStackParamList>;
-interface ResetPasswordScreenProps { navigation: ResetPasswordScreenNavigationProp; }
-interface FormData {
-  email: string;
-}
-
+// COMPONENTE PRINCIPAL DE RECUPERACIÓN
 const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation }) => {
+  
+  // ESTADO DEL COMPONENTE
+  // Se maneja el correo ingresado, el estado de carga y la visibilidad de alertas.
   const [formData, setFormData] = useState<FormData>({
     email: "",
   });
@@ -55,12 +69,18 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
     message: "",
   });
 
+  // GESTIÓN DE ALERTAS
   const showCustomAlert = (title: string, message: string) =>
     setCustomAlert({ visible: true, title, message });
+    
   const closeCustomAlert = () => setCustomAlert({ ...customAlert, visible: false });
+
+  // MANEJO DE FORMULARIO
   const updateFormData = (field: keyof FormData, value: string) =>
     setFormData((prevData) => ({ ...prevData, [field]: value }));
 
+  // LÓGICA DE RECUPERACIÓN
+  // Se valida el correo y se envía la solicitud de restablecimiento a Firebase.
   const handleResetPassword = async () => {
     if (!formData.email.trim()) {
       showCustomAlert("Recuperar contraseña", "Por favor, ingresa tu correo electrónico.");
@@ -77,7 +97,7 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
       setIsLoading(false);
       showCustomAlert(
         "Correo enviado",
-        "Revisa tu bandeja de entrada, recibirás un enlace para restablecer tu contraseña."
+        "Revisa tu bandeja de entrada, recibirás un enlace para restablecer tu contraseña. Si no lo ves, revisa la bandeja de spam."
       );
     } catch (error: any) {
       setIsLoading(false);
@@ -89,6 +109,7 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
     }
   };
 
+  // RENDERIZADO VISUAL
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -113,8 +134,9 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
           source={require("../../../assets/login_image.png")}
           style={styles.loginImage}
         />
-        <Text style={styles.title}>J o s s  L i f e</Text>
+        <Text style={styles.title}>J o s s  L i f e</Text>
         <Text style={styles.subtitle}>Restablece tu contraseña</Text>
+        
         <View style={styles.formContainer}>
           <TextInput
             style={styles.input}
@@ -138,6 +160,7 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
             </Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.linksContainer}>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={styles.link}>Volver a iniciar sesión</Text>
@@ -148,6 +171,7 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ navigation })
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -236,6 +260,8 @@ const styles = StyleSheet.create({
     fontFamily: "Pacifico",
   },
 });
+
+// ESTILOS DE ALERTAS
 const customStyles = StyleSheet.create({
   alertOverlay: {
     flex: 1,
@@ -282,4 +308,5 @@ const customStyles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default ResetPasswordScreen;

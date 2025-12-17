@@ -1,8 +1,11 @@
+// IMPORTACIONES
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { COLORS, FONT_SIZES } from '../types';
 import { FontAwesome } from '@expo/vector-icons';
 
+// INTERFAZ DE PROPS
+// Se definen estrictamente qué datos necesita en este componente para funcionar.
 export type ProductCardProps = {
   item: {
     id: string;
@@ -13,8 +16,11 @@ export type ProductCardProps = {
   onPress: () => void;
 };
 
+// COMPONENTE PRINCIPAL
+// Este componente visualiza un solo producto en forma de tarjeta.
 const ProductCard = ({ item, onPress }: ProductCardProps) => {
   return (
+    // TouchableOpacity permite que toda la tarjeta reaccione al toque
     <TouchableOpacity style={styles.cardContainer} onPress={onPress}>
       <Image source={item.image} style={styles.image} resizeMode="cover" />
       <Text style={styles.productName}>{item.name}</Text>
@@ -28,10 +34,11 @@ const ProductCard = ({ item, onPress }: ProductCardProps) => {
   );
 };
 
+// ESTILOS
 const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
-    backgroundColor: COLORS.surface, // Blanco
+    backgroundColor: COLORS.surface,
     borderRadius: 15,
     margin: 8,
     padding: 12,
@@ -50,7 +57,6 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: FONT_SIZES.medium,
     color: COLORS.text,
-    // fontFamily: FONTS.sansBold, // (Lo activas al cargar fuentes)
     fontWeight: '600',
     marginBottom: 5,
   },
@@ -63,9 +69,7 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: FONT_SIZES.medium,
     color: COLORS.text,
-    // fontFamily: FONTS.sansRegular, // (Lo activas al cargar fuentes)
     fontWeight: '500',
   },
 });
-
 export default ProductCard;

@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
@@ -21,9 +22,10 @@ import { collection, getDocs } from "firebase/firestore";
 
 import { useFavorites } from "../../context/FavoritesContext";
 
+// TIPOS DE NAVEGACIÓN
 type Props = StackScreenProps<RootStackParamList, "Favorites">;
 
-// Interfaz actualizada con stock opcional
+// MODELO DE PRODUCTO (CON STOCK OPCIONAL)
 interface Product {
   id: string;
   name: string;
@@ -31,9 +33,10 @@ interface Product {
   image: string;
   category: string;
   description?: string;
-  stock?: number; // <--- NUEVO CAMPO
+  stock?: number;
 }
 
+// COMPONENTE PRINCIPAL (FAVORITOS)
 const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
@@ -41,6 +44,7 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Carga todos los productos desde Firestore
   const fetchProducts = async () => {
     try {
       const productsRef = collection(db, "products");
@@ -56,7 +60,7 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
           category: data.category || "Otros",
           image: data.image || "",
           description: data.description,
-          stock: data.stock !== undefined ? data.stock : 0, // Leemos stock (default 0)
+          stock: data.stock !== undefined ? data.stock : 0,
         });
       });
 
@@ -69,6 +73,7 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  // Sincroniza la lista cuando la pantalla gana foco
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
@@ -76,19 +81,23 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
     }, [])
   );
 
+  // Filtra solo los productos marcados como favoritos
   const favoriteProducts = useMemo(() => {
     return products.filter((p) => !!favorites[p.id]);
   }, [products, favorites]);
 
+  // Refresco manual con Pull to Refresh
   const onRefresh = () => {
     setRefreshing(true);
     fetchProducts();
   };
 
+  // Renderiza cada tarjeta de producto favorito
   const renderItem = ({ item }: { item: Product }) => {
-    const imageSource = item.image ? { uri: item.image } : require("../../../assets/planta.png");
-    
-    // Calculamos si está agotado
+    const imageSource = item.image
+      ? { uri: item.image }
+      : require("../../../assets/planta.png");
+
     const currentStock = item.stock !== undefined ? item.stock : 0;
     const isOutOfStock = currentStock <= 0;
 
@@ -96,17 +105,26 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.85}
-        onPress={() => navigation.navigate("ProductDetail", { product: item, userRole: null })}
+        onPress={() =>
+          navigation.navigate("ProductDetail", { product: item, userRole: null })
+        }
       >
         <Image source={imageSource} style={styles.image} resizeMode="cover" />
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
           <Text style={styles.price}>{item.price.toLocaleString()} $ mxn</Text>
-          
-          {/* INDICADOR DE STOCK EN FAVORITOS */}
-          <Text style={[styles.stockText, isOutOfStock ? {color: '#ff4444'} : {color: '#4CAF50'}]}>
-             {isOutOfStock ? "Agotado" : `Disponibles: ${currentStock}`}
+
+          {/* Indicador de stock en la lista de favoritos */}
+          <Text
+            style={[
+              styles.stockText,
+              isOutOfStock ? { color: "#ff4444" } : { color: "#4CAF50" },
+            ]}
+          >
+            {isOutOfStock ? "Agotado" : `Disponibles: ${currentStock}`}
           </Text>
         </View>
 
@@ -125,22 +143,32 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  // Estado vacío cuando no hay favoritos
   const EmptyState = () => (
     <View style={styles.content}>
       <MaterialIcons name="favorite" size={52} color={COLORS.textSecondary} />
       <Text style={styles.emptyTitle}>Aún no hay favoritos</Text>
-      <Text style={styles.emptyText}>Marca productos con el corazón para verlos aquí.</Text>
+      <Text style={styles.emptyText}>
+        Marca productos con el corazón para verlos aquí.
+      </Text>
 
-      <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={() => navigation.goBack()}
+      >
         <Text style={styles.primaryBtnText}>Volver al catálogo</Text>
       </TouchableOpacity>
     </View>
   );
 
+  // Renderizado principal
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => navigation.goBack()}
+        >
           <MaterialIcons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
 
@@ -175,6 +203,7 @@ const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
@@ -249,11 +278,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
-    elevation: 2, // Sombra suave
+    elevation: 2,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 }
+    shadowOffset: { width: 0, height: 2 },
   },
   image: {
     width: 64,
@@ -273,11 +302,10 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  // NUEVO ESTILO PARA STOCK
   stockText: {
     fontFamily: "KalamBold",
     fontSize: 12,
-    marginTop: 4
+    marginTop: 4,
   },
   heartBtn: {
     width: 44,
@@ -292,4 +320,5 @@ const styles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default FavoritesScreen;

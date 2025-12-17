@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useEffect, useState } from "react";
 import { 
   View, 
@@ -15,22 +16,25 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { StackScreenProps } from "@react-navigation/stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
 import { COLORS, FONT_SIZES } from "../../types";
-
-// Firebase imports para Transacciones
 import { doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-
 import { useCart, CartItem } from "../../context/CartContext";
 
+// DEFINICIÓN DE TIPOS
 type Props = StackScreenProps<RootStackParamList, "Cart">;
 
+// COMPONENTE PRINCIPAL (CARRITO DE COMPRAS)
+// Gestiona la visualización del carrito, la sincronización de stock con Firebase y el proceso de compra.
 const CartScreen: React.FC<Props> = ({ navigation }) => {
+  
+  // HOOKS DE CONTEXTO
   const { cart, removeFromCart, updateQuantity, total, clearCart, refreshCart } = useCart();
   
+  // ESTADOS DE INTERFAZ
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); 
 
-  // --- ESTADO PARA LA ALERTA PERSONALIZADA ---
+  // ESTADO DE ALERTAS
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
@@ -38,6 +42,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     buttons?: { text: string; onPress: () => void; style?: "cancel" | "destructive" }[];
   }>({ visible: false, title: "", message: "" });
 
+  // GESTIÓN DE ALERTAS
   const showCustomAlert = (
     title: string,
     message: string,
@@ -50,7 +55,8 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     setCustomAlert({ ...customAlert, visible: false, buttons: [] });
   };
 
-  // --- SINCRONIZACIÓN AUTOMÁTICA ---
+  // SINCRONIZACIÓN DE INVENTARIO
+  // Verifica el stock y precios actuales en Firebase al abrir el carrito para asegurar la consistencia de datos.
   useEffect(() => {
     const syncCartWithFirebase = async () => {
       if (cart.length === 0) return;
@@ -68,7 +74,6 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
             const freshData = productSnap.data();
             const freshProduct = { id: productSnap.id, ...freshData } as any;
 
-            // Verificamos si precio, nombre O STOCK cambiaron
             const currentStock = (item.product as any).stock ?? 0;
             const freshStock = freshProduct.stock ?? 0;
 
@@ -79,16 +84,15 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
               changesDetected = true;
               updatedCartItems.push({
                 product: freshProduct,
-                // Si el stock bajó a menos de lo que tengo en carrito, ajustamos la cantidad
+                // Ajuste automático de cantidad si el stock es menor a lo solicitado
                 quantity: item.quantity > freshStock ? freshStock : item.quantity
               });
             } else {
               updatedCartItems.push(item);
             }
           } else {
-            // Producto eliminado de la BD
+            // El producto fue eliminado de la base de datos
             changesDetected = true; 
-            // No lo agregamos a updatedCartItems para que se borre del carrito local
           }
         }
 
@@ -111,7 +115,8 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     syncCartWithFirebase();
   }, []); 
 
-  // --- LÓGICA DE COMPRA CORREGIDA ---
+  // PROCESO DE COMPRA (TRANSACCIONES)
+  // Ejecuta una transacción atómica en Firestore para descontar stock de manera segura.
   const handleCheckout = async () => {
     if (cart.length === 0) return;
 
@@ -121,7 +126,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
       await runTransaction(db, async (transaction) => {
         const updates = [];
 
-        // PASO 1: LEER TODOS (Sin escribir nada todavía)
+        // Fase de Lectura: Verifica existencia y stock suficiente para todos los items
         for (const item of cart) {
             const productRef = doc(db, "products", item.product.id);
             const productDoc = await transaction.get(productRef);
@@ -136,18 +141,16 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                 throw new Error(`No hay suficiente stock de "${item.product.name}". Disponibles: ${currentStock}`);
             }
 
-            // Guardamos la operación pendiente para el paso 2
             const newStock = currentStock - item.quantity;
             updates.push({ ref: productRef, newStock });
         }
 
-        // PASO 2: ESCRIBIR TODOS (Ahora que ya leímos todo)
+        // Fase de Escritura: Aplica los cambios si todas las lecturas fueron exitosas
         for (const update of updates) {
             transaction.update(update.ref, { stock: update.newStock });
         }
       });
 
-      // 3. Éxito
       setIsProcessing(false);
       showCustomAlert("¡Pedido Exitoso!", "Tu compra ha sido procesada.", [
         { 
@@ -169,7 +172,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  // --- ALERTA ---
+  // COMPONENTE VISUAL DE ALERTA
   const CustomAlert: React.FC = () => {
     const alertButtons =
       customAlert.buttons && customAlert.buttons.length > 0
@@ -216,14 +219,13 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  // RENDERIZADO DE ITEM
   const renderItem = ({ item }: { item: CartItem }) => {
     const imageSource = item.product.image 
         ? { uri: item.product.image } 
         : require("../../../assets/planta.png");
 
     const itemSubtotal = item.product.price * item.quantity;
-    
-    // Obtenemos el stock (si no existe, asumimos 0)
     const stock = (item.product as any).stock !== undefined ? (item.product as any).stock : 0;
     const isMaxReached = item.quantity >= stock;
 
@@ -235,7 +237,6 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.itemTitle} numberOfLines={1}>{item.product.name}</Text>
             <Text style={styles.itemPrice}>${item.product.price} mxn c/u</Text>
             
-            {/* NUEVO: Mostrar stock disponible */}
             <Text style={{
                 fontSize: 12, 
                 fontFamily: 'KalamBold', 
@@ -255,7 +256,6 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                 
                 <Text style={styles.qtyText}>{item.quantity}</Text>
                 
-                {/* Bloqueamos el botón + si ya no hay stock */}
                 <TouchableOpacity 
                     style={[styles.controlBtn, isMaxReached && { opacity: 0.3, backgroundColor: '#ddd' }]} 
                     onPress={() => !isMaxReached && updateQuantity(item.product.id, 'increase')}
@@ -276,6 +276,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  // RENDERIZADO PRINCIPAL
   return (
     <SafeAreaView style={styles.container}>
       <CustomAlert />
@@ -347,6 +348,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
@@ -595,4 +597,5 @@ const styles = StyleSheet.create({
   }
 });
 
+// EXPORTACIÓN
 export default CartScreen;

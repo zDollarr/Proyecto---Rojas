@@ -1,3 +1,4 @@
+// IMPORTACIONES
 import React, { useState } from "react";
 import {
   View,
@@ -14,19 +15,36 @@ import {
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
 import { COLORS, FONT_SIZES } from "../../../types/index";
-// Importamos auth y db desde tu configuración corregida
 import { auth, db } from "../../firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { MaterialIcons } from "@expo/vector-icons"; 
 
+// DEFINICIÓN DE TIPOS E INTERFACES
+// Se definen las props para la navegación y el formulario de registro.
 interface CustomAlertProps {
   title: string;
   message: string;
   visible: boolean;
   onClose: () => void;
 }
+
+type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, "Register">;
+
+interface RegisterScreenProps { 
+    navigation: RegisterScreenNavigationProp; 
+}
+
+interface RegisterFormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+// COMPONENTES AUXILIARES
+// Componente modal para mostrar alertas personalizadas.
 const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onClose }) => (
   <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
     <Pressable style={customStyles.alertOverlay} onPress={onClose}>
@@ -41,16 +59,11 @@ const CustomAlert: React.FC<CustomAlertProps> = ({ title, message, visible, onCl
   </Modal>
 );
 
-type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, "Register">;
-interface RegisterScreenProps { navigation: RegisterScreenNavigationProp; }
-interface RegisterFormData {
-  username: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
+// COMPONENTE PRINCIPAL DE REGISTRO
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
+  
+  // ESTADO DEL COMPONENTE
+  // Gestión de los campos del formulario, indicadores de carga y visibilidad de contraseñas.
   const [formData, setFormData] = useState<RegisterFormData>({
     username: "",
     email: "",
@@ -67,12 +80,18 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     message: "",
   });
 
+  // GESTIÓN DE ALERTAS
   const showCustomAlert = (title: string, message: string) =>
     setCustomAlert({ visible: true, title, message });
+    
   const closeCustomAlert = () => setCustomAlert({ ...customAlert, visible: false });
+
+  // MANEJO DE FORMULARIO
   const updateFormData = (field: keyof RegisterFormData, value: string) =>
     setFormData((prevData) => ({ ...prevData, [field]: value }));
 
+  // VALIDACIÓN DE DATOS
+  // Se comprueban requisitos como correo válido, longitud de contraseña y coincidencia entre contraseñas.
   const validateForm = (): boolean => {
     if (!formData.email.trim()) {
       showCustomAlert("ERROR", "Por favor, ingresa un correo electrónico.");
@@ -101,51 +120,36 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     return true;
   };
 
+  // LÓGICA DE REGISTRO
+  // Verifica si el nombre de usuario existe, crea la cuenta en Authentication y guarda los datos adicionales en Firestore.
   const handleRegister = async () => {
-    console.log("--- INICIO REGISTRO ---");
     if (!validateForm()) return;
     setIsLoading(true);
 
     try {
-      console.log("1. Buscando username...");
       const usersCol = collection(db, "users");
       const q = query(usersCol, where("username", "==", formData.username));
       const querySnapshot = await getDocs(q);
-      console.log("1. Username buscado. Vacio?", querySnapshot.empty);
       
       if (!querySnapshot.empty) {
-        console.log("ERROR: Username duplicado");
         setIsLoading(false);
         showCustomAlert("ERROR", "El nombre de usuario ya está en uso.");
         return;
       }
 
-      console.log("2. Creando Auth...");
       const res = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      console.log("2. Auth creado UID:", res.user.uid);
 
-      console.log("3. Guardando en Firestore (background)...");
-      
-      // Quitamos el await y el try/catch bloqueante
-      // Esto lanza la petición a Firestore y sigue corriendo INMEDIATAMENTE a la navegación
       setDoc(doc(db, "users", res.user.uid), {
           username: formData.username,
           email: formData.email,
           role: "client" 
       })
-      .then(() => console.log("Firestore guardó los datos (en background)"))
       .catch((e) => console.log("Error guardando en background:", e));
 
-      // La navegación se ejecutará milisegundos después de lanzar la petición
-      // Sin esperar a que Firestore responda
-      console.log("4. Navegando a Home...");
       setIsLoading(false);
       navigation.replace("Home");
 
-      console.log("--- FIN REGISTRO ---");
-
     } catch (error: any) {
-      console.error("ERROR GENERAL:", error);
       setIsLoading(false);
       let msg = "Ocurrió un error.";
       if (error.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
@@ -153,12 +157,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     }
   };
   
+  // RENDERIZADO VISUAL
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* BOTÓN X */}
       <TouchableOpacity
         style={styles.closeButton}
         onPress={() => navigation.replace("Home")}
@@ -177,8 +181,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           source={require("../../../assets/login_image.png")}
           style={styles.loginImage}
         />
-        <Text style={styles.title}>J o s s  L i f e</Text>
+        <Text style={styles.title}>J o s s  L i f e</Text>
         <Text style={styles.subtitle}>Registrar cuenta</Text>
+        
         <View style={styles.formContainer}>
           <TextInput
             style={styles.input}
@@ -200,7 +205,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             editable={!isLoading}
             placeholder="Correo electrónico"
           />
-          {/* Campo contraseña con ojito */}
+          
           <View style={{ position: "relative" }}>
             <TextInput
               style={styles.input}
@@ -224,7 +229,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               />
             </TouchableOpacity>
           </View>
-          {/* Campo confirmar contraseña con ojito */}
+          
           <View style={{ position: "relative" }}>
             <TextInput
               style={styles.input}
@@ -248,6 +253,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               />
             </TouchableOpacity>
           </View>
+
           <TouchableOpacity
             style={[styles.loginButton, { opacity: isLoading ? 0.6 : 1 }]}
             onPress={handleRegister}
@@ -258,6 +264,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.linksContainer}>
           <TouchableOpacity onPress={() => navigation.navigate("Login")}>
             <Text style={styles.link}>¿Ya tienes cuenta?</Text>
@@ -268,6 +275,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   );
 };
 
+// ESTILOS DE PANTALLA
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -370,6 +378,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// ESTILOS DE COMPONENTES PERSONALIZADOS
 const customStyles = StyleSheet.create({
   alertOverlay: {
     flex: 1,
@@ -416,4 +425,5 @@ const customStyles = StyleSheet.create({
   },
 });
 
+// EXPORTACIÓN
 export default RegisterScreen;
