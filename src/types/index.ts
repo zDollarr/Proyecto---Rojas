@@ -1,5 +1,4 @@
 import { StackScreenProps } from '@react-navigation/stack';
-
 export interface Product {
   id: string;
   name: string;
@@ -7,18 +6,14 @@ export interface Product {
   image: string;
   category: string;
 }
-
-
 export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
 };
-
 export interface LoginFormData {
   username: string;
   password: string;
 }
-
 export const COLORS = {
   primary: "#dfdfdfff", 
   background: "#f2f0ebf5", 

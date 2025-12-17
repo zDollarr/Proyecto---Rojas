@@ -137,9 +137,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   const fetchProducts = async () => {
-    // --- CORRECCIÓN IMPORTANTE: Quitamos el bloqueo que causaba el "cargando infinito" ---
-    // if (loadingProducts && !refreshing) return; <--- ESTO SE ELIMINÓ
-
     try {
       const productsRef = collection(db, "products");
       const querySnapshot = await getDocs(productsRef);

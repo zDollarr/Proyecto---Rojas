@@ -14,7 +14,7 @@ const firebaseConfig = {
   measurementId: "G-3RLHWFSZ0T"
 };
 
-// 1. Inicializar App
+// 1. Inicialización de Instancia de Firebase
 let app;
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
@@ -22,35 +22,25 @@ if (getApps().length === 0) {
   app = getApp();
 }
 
-// 2. Auth con Persistencia
+// 2. Configuración de Autenticación con Persistencia Local (AsyncStorage)
 let auth;
 try {
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage)
   });
 } catch (e) {
-  auth = getAuth(app);
+  auth = getAuth(app); // Fallback para entorno web/debug
 }
 
-// 3. Firestore con Persistencia (SOLUCIÓN SIMPLE)
-// Usamos initializeFirestore pero sin la configuración compleja de caché experimental
-// Firebase JS SDK v9+ habilita persistencia por defecto en móviles si se usa así:
+// 3. Inicialización de Base de Datos con Caché Offline
 let db;
 try {
-    // Forzamos la inicialización básica que suele activar la persistencia por defecto en RN
     db = initializeFirestore(app, {
-       cacheSizeBytes: CACHE_SIZE_UNLIMITED 
+       cacheSizeBytes: CACHE_SIZE_UNLIMITED // Habilita caché persistente para modo offline
     });
 } catch (e) {
     db = getFirestore(app);
 }
-
-// IMPORTANTE: Habilitar persistencia explícitamente si es necesario
-// (Solo funciona en web modular, en RN es automático con initializeFirestore, pero por si acaso)
-/* 
-import { enableIndexedDbPersistence } from "firebase/firestore"; 
-// Esto suele fallar en Expo Go, por eso confiamos en la config de arriba.
-*/
 
 export default app;
 export { auth, db };

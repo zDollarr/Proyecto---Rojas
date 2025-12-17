@@ -111,7 +111,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     syncCartWithFirebase();
   }, []); 
 
-  // --- LÓGICA DE COMPRA ---
+  // --- LÓGICA DE COMPRA CORREGIDA ---
   const handleCheckout = async () => {
     if (cart.length === 0) return;
 
@@ -119,7 +119,9 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       await runTransaction(db, async (transaction) => {
-        // 1. Verificar stock
+        const updates = [];
+
+        // PASO 1: LEER TODOS (Sin escribir nada todavía)
         for (const item of cart) {
             const productRef = doc(db, "products", item.product.id);
             const productDoc = await transaction.get(productRef);
@@ -134,9 +136,14 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
                 throw new Error(`No hay suficiente stock de "${item.product.name}". Disponibles: ${currentStock}`);
             }
 
-            // 2. Restar stock
+            // Guardamos la operación pendiente para el paso 2
             const newStock = currentStock - item.quantity;
-            transaction.update(productRef, { stock: newStock });
+            updates.push({ ref: productRef, newStock });
+        }
+
+        // PASO 2: ESCRIBIR TODOS (Ahora que ya leímos todo)
+        for (const update of updates) {
+            transaction.update(update.ref, { stock: update.newStock });
         }
       });
 
