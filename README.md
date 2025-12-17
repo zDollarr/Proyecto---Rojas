@@ -22,11 +22,11 @@ Aplicación móvil para la gestión de un vivero: catálogo de productos, carrit
 # Cómo ejecutar el proyecto
 
 1. Clonar el repositorio:
-   git clone https://github.com/zDollarr/Proyecto---Rojas
-   cd Proyecto---Rojas
+   - git clone https://github.com/zDollarr/Proyecto---Rojas
+   - cd Proyecto---Rojas
    
 3. Instalar dependencias:
-   npm install
+   - npm install
 
 3. Ejecutar en modo desarrollo:
-   npx expo start
+   - npx expo start
